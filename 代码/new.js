@@ -9,6 +9,6 @@ function new1(fn, ...args) {
 // test
 function A() {
   this.a = 1;
-  return undefined;
+  // return [];
 }
-console.log(new1(A), new A());
+console.log(new1(A), new A().__proto__);
