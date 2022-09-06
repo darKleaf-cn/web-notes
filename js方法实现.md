@@ -35,3 +35,14 @@ a.reduce(function(a, b){
 #### js实现
 
 [代码](./代码/new.js)
+
+### call apply bind
+
+#### 描述
+
+1、call和apply立即执行
+2、call和bind的参数是参数列表，apply的参数是参数数组
+
+#### js实现
+
+[代码](./代码/call-apply-bind.js)
