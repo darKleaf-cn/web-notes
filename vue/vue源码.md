@@ -48,3 +48,100 @@ function proxy(obj, sourceKey, key) {
   });
 }
 ```
+
+### 响应式原理加上依赖收集
+
+在上面响应式原理的同时进行依赖收集，通过 get 触发依赖收集，set 只对依赖收集的进行响应
+
+```js
+function defineReactive(obj, key, value) {
+  const dep = new Dep();
+
+  const property = Object.getOwnPropertyDescriptor(obj, key);
+  if (property && property.configurable === false) {
+    return;
+  }
+  const getter = property && property.get;
+  const setter = property && property.set;
+
+  const childOb = observe(val);
+  Object.defineProperty(obj, key, {
+    enumerable: true,
+    configurable: true,
+    get() {
+      const value = getter ? getter.call(obj) : val;
+      if (Dep.target) {
+        dep.depend();
+        if (childOb) {
+          childOb.dep.depend();
+        }
+        if (Array.isArray(value)) {
+          dependArray(value);
+        }
+      }
+      return value;
+    },
+    set(newVal) {
+      const value = getter ? getter.call(obj) : val;
+      if (newVal === value) {
+        return;
+      }
+      if (setter) {
+        setter.call(obj, newVal);
+      } else {
+        val = newVal;
+      }
+      childOb = observe(newVal);
+      dep.notify();
+    }
+  });
+}
+```
+
+#### Dep
+
+```js
+let uid = 0;
+class Dep {
+  static target: ?Watcher;
+  id: number;
+  subs: Array<Watcher>;
+
+  constructor() {
+    this.id = uid++;
+    this.subs = [];
+  }
+  addSubs(sub) {
+    this.subs.push(sub);
+  }
+  removeSub(sub) {
+    const i = this.subs.indexOf(sub);
+    if (i !== -1) {
+      this.subs.splice(i, 1);
+    }
+  }
+  depend() {
+    if (Dep.target) {
+      this.subs.push(Dep.target);
+    }
+  }
+  notify() {
+    const subs = this.subs.slice();
+    for (let i = 0, l = subs.length; i < l; i++) {
+      subs[i].update();
+    }
+  }
+}
+
+Dep.target = null;
+const targetStack = [];
+function pushTarget(target) {
+  targetStack.push(target);
+  Dep.target = target;
+}
+
+function popTarget() {
+  targetStack.pop();
+  Dep.target = targetStack[targetStack.length - 1];
+}
+```

@@ -1,12 +1,12 @@
-Array.prototype.reduce1 = function (callback, initValue) {
-  const arr = this;
-  let result;
-  for (let i = 0; i < arr.length; i++) {
-    if (initValue === undefined && i === 0) {
-      result = arr[0];
-    } else {
-      result = callback(result, arr[i], i, arr);
-    }
+const a = { c: { b: 1 } };
+Object.defineProperty(a.c, 'b', {
+  get() {
+    console.log(this);
+    return 1;
+  },
+  set(q) {
+    console.log(this);
   }
-	return result;
-};
+});
+JSON.stringify(a)
+// a.b = 1;
