@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <input id="file" type="file">
+  <script>
+    const file = document.querySelector('#file');
+    // file.addEventListener('change', function() {
+
+    // })
+    console.log(file)
+    // file.onchange = function(e) {
+    //   console.log(e.target);
+    //   console.log(file.files)
+    // }
+    file.addEventListener('change', function(e) {
+      const a = new FileReader();
+      a.onload = function(e) {
+        console.log(e.target.result)
+      }
+      // a.readAsArrayBuffer(e.target.files[0]);
+      // a.readAsBinaryString(e.target.files[0]);
+      // a.readAsDataURL(e.target.files[0]);
+      a.readAsText(e.target.files[0])
+    })
+  </script>
+</body>
+</html>
