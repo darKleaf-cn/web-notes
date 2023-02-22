@@ -18,7 +18,6 @@ class Promise1 {
     if (this.status === PENDING) {
       this.status = FULFILLED;
       this.value = value;
-      console.log(this.onFulfilledCallback);
       while (this.onFulfilledCallback.length) {
         this.onFulfilledCallback.shift()();
       }
