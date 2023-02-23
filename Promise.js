@@ -12,34 +12,27 @@ class Promise1 {
     if (typeof func !== 'function') {
       throw Error('');
     }
-    func(this.resolve, this.rejected);
+    const resolve = (value) => {
+      if (this.status === PENDING) {
+        this.status = FULFILLED;
+        this.value = value;
+        this.onFulfilledCallback.forEach((fn) => fn());
+      }
+    };
+    const reject = (reason) => {
+      if (this.status === PENDING) {
+        this.status = REJECTED;
+        this.reason = reason;
+        this.onRejectedCallback.forEach((fn) => fn());
+      }
+    };
+    try {
+      func(resolve, reject);
+    } catch (error) {
+      reject(error);
+    }
   }
-  resolve = (value) => {
-    if (this.status === PENDING) {
-      this.status = FULFILLED;
-      this.value = value;
-      while (this.onFulfilledCallback.length) {
-        this.onFulfilledCallback.shift()();
-      }
-    }
-  };
-  rejected = (reason) => {
-    if (this.status === PENDING) {
-      this.status = REJECTED;
-      this.reason = reason;
-      while (this.onRejectedCallback.length) {
-        this.onRejectedCallback.shift()();
-      }
-    }
-  };
   then(onFulfilled, onRejected) {
-    // onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : (value) => value;
-    // onRejected =
-    //   typeof onRejected === 'function'
-    //     ? onRejected
-    //     : (reason) => {
-    //         throw Error(reason);
-    //       };
     const realOnFulfilled = typeof onFulfilled === 'function' ? onFulfilled : (value) => value;
     const realOnRejected =
       typeof onRejected === 'function'
@@ -47,105 +40,149 @@ class Promise1 {
         : (reason) => {
             throw reason;
           };
-    const promise2 = new Promise1((resolve, rejected) => {
-      // console.log(this.status, this.onFulfilledCallback, onFulfilled);
+    const promise2 = new Promise1((resolve, reject) => {
       if (this.status === FULFILLED) {
         setTimeout(() => {
-          const x = realOnFulfilled(this.value);
-          resolvePromise(promise2, x, resolve, rejected);
+          try {
+            const x = realOnFulfilled(this.value);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (err) {
+            reject(err);
+          }
         }, 0);
       } else if (this.status === REJECTED) {
         setTimeout(() => {
-          const x = realOnRejected(this.reason);
-          resolvePromise(promise2, x, resolve, rejected);
-        }, 0);
+          try {
+            const x = realOnRejected(this.reason);
+            resolvePromise(promise2, x, resolve, reject);
+          } catch (err) {
+            reject(err);
+          }
+        });
       } else if (this.status === PENDING) {
         this.onFulfilledCallback.push(() => {
           setTimeout(() => {
-            const x = realOnFulfilled(this.value);
-            resolvePromise(promise2, x, resolve, rejected);
-          }, 0);
+            try {
+              const x = realOnFulfilled(this.value);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (err) {
+              reject(err);
+            }
+          });
         });
         this.onRejectedCallback.push(() => {
           setTimeout(() => {
-            const x = realOnRejected(this.reason);
-            resolvePromise(promise2, x, resolve, rejected);
-          }, 0);
+            try {
+              const x = realOnRejected(this.reason);
+              resolvePromise(promise2, x, resolve, reject);
+            } catch (err) {
+              reject(err);
+            }
+          });
         });
       }
     });
     return promise2;
+  }
+  catch(onRejected) {
+    return this.then(undefined, onRejected);
   }
   all(iterators) {
     const arr = Array.from(iterators);
     const len = arr.length;
     const result = [];
     let num = 0;
-    return new Promise1((resolve, rejected) => {
+    return new Promise1((resolve, reject) => {
       for (let i = 0; i < arr.length; i++) {
-				if(arr[i] instanceof Promise1) {
-					arr[i]
-          .then((value) => {
-            num++;
-            result[i] = value;
-            if (num === len) {
-              resolve(result);
-            }
-          })
-          .catch((e) => {
-            rejected(e);
-          });
-				} else {
-					num++;
-					result[i] = arr[i];
-					if (num === len) {
-						resolve(result);
-					}
-				}
+        if (arr[i] instanceof Promise1) {
+          arr[i]
+            .then((value) => {
+              num++;
+              result[i] = value;
+              if (num === len) {
+                resolve(result);
+              }
+            })
+            .catch((e) => {
+              reject(e);
+            });
+        } else {
+          num++;
+          result[i] = arr[i];
+          if (num === len) {
+            resolve(result);
+          }
+        }
       }
     });
   }
+  race(iterators) {
+    const arr = Array.from(iterators);
+    return new Promise1((resolve, reject) => {
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i] instanceof Promise1) {
+          arr[i]
+            .then((value) => {
+              resolve(value);
+            })
+            .catch((err) => {
+              reject(err);
+            });
+        } else {
+          resolve(arr[i]);
+        }
+      }
+    });
+  }
+  static resolve(value) {
+    return new Promise1((resolve) => {
+      resolve(value);
+    });
+  }
+  static reject(reason) {
+    return new Promise1((resolve, reject) => {
+      reject(reason);
+    });
+  }
+  finally(cb) {
+    return this.then(
+      (value) => Promise1.resolve(cb()).then(() => value),
+      (reason) =>
+        Promise1.reject(cb()).catch(() => {
+          throw reason;
+        })
+    );
+  }
 }
 
-function resolvePromise(promise, x, resolve, reject) {
-  if (promise === x) {
+function resolvePromise(promise2, x, resolve, reject) {
+  if (x === promise2) {
     reject(new Error(''));
   }
   if (typeof x === 'object' || typeof x === 'function') {
     if (x === null) {
       resolve(x);
     }
-    let then;
-    try {
-      then = x.then;
-    } catch (e) {
-      reject(e);
-    }
+    const then = x.then;
     if (typeof then === 'function') {
       let called = false;
       try {
         then.call(
-          x, // this 指向 x
-          // 如果 resolvePromise 以值 y 为参数被调用，则运行 [[Resolve]](promise, y)
+          x,
           (y) => {
             if (called) return;
             called = true;
-            resolvePromise(promise, y, resolve, reject);
+            resolvePromise(promise2, y, resolve, reject);
           },
-          // 如果 rejectPromise 以据因 r 为参数被调用，则以据因 r 拒绝 promise
           (r) => {
             if (called) return;
             called = true;
             reject(r);
           }
         );
-      } catch (error) {
-        // 如果调用 then 方法抛出了异常 error：
-        // 如果 resolvePromise 或 rejectPromise 已经被调用，直接返回
+      } catch (err) {
         if (called) return;
-
-        // 否则以 error 为据因拒绝 promise
-        reject(error);
+        reject(err);
       }
     } else {
       resolve(x);
@@ -155,41 +192,27 @@ function resolvePromise(promise, x, resolve, reject) {
   }
 }
 
-// const a = new Promise1((resolve) => resolve(1));
-// a.then(() => {
-//   console.log(0);
-//   return new Promise((resolve, reject) => {
-//     console.log(40);
-//     // resolve(4);
-//     reject(4);
-//   })
-//     .then((a) => {
-//       console.log(a);
-//       throw Error('11');
-//     })
-//     .catch((a) => {
-//       console.log(a);
-//       return 42;
-//     });
-// }).then((a) => {
-//   console.log(a);
-// });
-
-const b = new Promise1((resolve) => resolve(1));
-b.then(() => {
-  console.log(1);
+const a = new Promise1((resolve) => resolve(1));
+a.then(() => {
+  console.log(0);
+  return new Promise1((resolve, reject) => {
+    console.log(40);
+    resolve(4);
+    // reject(4);
+  })
+    .then((a) => {
+      console.log(a);
+      throw Error('11');
+    })
+    .catch((a) => {
+      console.log(a);
+      return 42;
+    });
+}).then((a) => {
+  console.log(a);
+  throw a;
+}).finally(() => {
+  console.log(43)
+}).catch((a) => {
+  console.log(a)
 })
-  .then(() => {
-    console.log(2);
-  })
-  .then(() => {
-    console.log(3);
-  })
-  .then(() => {
-    console.log(5);
-  })
-  .then(() => {
-    console.log(6);
-  });
-
-console.log(-1);
