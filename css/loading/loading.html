@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    .progress-1 {
+      width: 120px;
+      height: 20px;
+      /* background: linear-gradient(#000 0 0) 0/0% no-repeat; */
+      animation: p1 2s infinite linear;
+      background-image: linear-gradient(#000 0 100%);
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      background-size: 0%;
+    }
+
+    @keyframes p1 {
+      100% {
+        background-size: 100%
+      }
+    }
+
+    .progress-2 {
+      width: 120px;
+      height: 20px;
+      border-radius: 20px;
+      background-image: linear-gradient(orange 0 100%);
+      background-repeat: no-repeat;
+      background-position: 0 0;
+      background-size: 0%;
+      background-color: lightblue;
+      animation: p2 2s infinite steps(10);
+    }
+
+    @keyframes p2 {
+      100% {
+        background-size: 110%;
+      }
+    }
+
+    .progress-3 {
+      width: 120px;
+      height: 20px;
+      background-image: linear-gradient()
+    }
+  </style>
+</head>
+
+<body>
+  <div class="progress-1"></div>
+  <div class="progress-2"></div>
+  <div class="progress-3"></div>
+
+</body>
+
+</html>

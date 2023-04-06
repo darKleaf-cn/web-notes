@@ -46,11 +46,17 @@ dom.offsetHeight;
 
 5、scroll
 
-指元素(必须是可以滚动的元素，否则是scrollTop是0)没显示出来的实际高度
+指元素(必须是可以滚动的元素，否则是 scrollTop 是 0)没显示出来的实际高度
 
 ```js
-dom.scrollTop // 对象上边界和可视窗口左上角的距离
-dom.scrollLeft // 对象左边界和可视窗口左上角的距离
-dom.scrollHeight // 对象的滚动高度
-dom.scrollWidth // 对象的滚动宽度
+dom.scrollTop; // 对象上边界和可视窗口左上角的距离
+dom.scrollLeft; // 对象左边界和可视窗口左上角的距离
+dom.scrollHeight; // 对象的滚动高度
+dom.scrollWidth; // 对象的滚动宽度
 ```
+
+### 作用域
+
+1. 全局作用域
+2. 函数作用域
+3. 块级作用域（es6 之前）
