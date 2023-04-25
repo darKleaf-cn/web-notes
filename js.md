@@ -55,6 +55,16 @@ dom.scrollHeight; // 对象的滚动高度
 dom.scrollWidth; // 对象的滚动宽度
 ```
 
+6、client
+
+指元素
+```js
+dom.clientLeft; // 对象左边框宽度，即border，不包含padding、margin
+dom.clientTop; // 对象上边框宽度，即border，不包含padding、margin
+dom.clientWidth; // 对象内部宽度，即content + padding
+dom.clientHeight; // 对象内部高度，即content+ padding
+```
+
 ### 作用域
 
 1. 全局作用域

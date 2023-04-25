@@ -12,3 +12,19 @@ window.navigator.userAgent 根据每种浏览器的区别来区分
 6. 服务端响应请求
 7. tcp 断开连接：四次挥手
 8. 页面渲染：解析 html 为 dom 树，解析 style 为 css 格式树，最后合并为 render 树
+
+#### 3、格式化时间为年月日时分秒
+
+```js
+function format() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const date = now.getDate();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const second = now.getSeconds();
+  const time = `${year}-${month}-${date} ${hour}:${minute}:${second}`;
+  return time;
+}
+```
