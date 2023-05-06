@@ -11,3 +11,4 @@ function format() {
   return time;
 }
 format();
+console.log(process.cwd())
