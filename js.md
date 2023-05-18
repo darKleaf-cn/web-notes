@@ -76,4 +76,4 @@ dom.clientHeight; // 对象内部高度，即content+ padding
 
 1. 全局作用域
 2. 函数作用域
-3. 块级作用域（es6 之前）
+3. 块级作用域（es6 之后）
