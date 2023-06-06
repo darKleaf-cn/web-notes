@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: auto;
+    }
+
+    canvas {
+      background-color: #000000;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    /** @type{HTMLCanvasElement} */
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = w;
+    canvas.height = h;
+
+    window.addEventListener('resize', function () {
+      w = window.innerWidth;
+      h = window.innerHeight;
+    })
+
+    const drops = [];
+    class Drop {
+      constructor() {
+        this.init();
+      }
+      init() {
+        this.y = 0;
+        this.x = random(0, w);
+        this.vy = random(4, 5);
+
+        this.l = random(0.8 * h, 0.9 * h);
+
+        this.r = 1;
+        this.vr = 1;
+
+        this.a = 1;
+        this.va = 0.96;
+      }
+      draw() {
+        if (this.y >= this.l) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+          ctx.strokeStyle = `rgba(255, 255, 0, ${this.a})`;
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = 'rgba(255, 255, 0, 1)';
+          ctx.fillRect(this.x, this.y, 2, 10);
+        }
+        this.update();
+      }
+      update() {
+        if (this.y >= this.l) {
+          if (this.a <= 0.03) {
+            this.init();
+          } else {
+            this.a *= this.va;
+            this.r += this.vr;
+          }
+        } else {
+          this.y += this.vy;
+        }
+      }
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    for (let i = 0; i < 30; i++) {
+      setTimeout(function () {
+        const drop = new Drop();
+        drops.push(drop);
+      }, i * 300);
+    }
+
+    function move() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, w, h);
+      for (let i = 0; i < drops.length; i++) {
+        drops[i].draw();
+      }
+      requestAnimationFrame(move);
+    }
+    move();
+  </script>
+</body>
+
+</html>

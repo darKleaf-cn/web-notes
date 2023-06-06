@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    body,
+    html {
+      padding: 0;
+      margin: 0;
+    }
+    canvas {
+      background-color: #000000;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    /** @type {HTMLCanvasElement}*/
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+
+    window.onresize = function () {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+
+    ctx.fillStyle = 'aqua';
+
+    const drops = [];
+    function Drop() { };
+    Drop.prototype = {
+      init: function () {
+        // 设置坐标
+        this.x = random(0, w);
+        this.y = 0;
+        // y方向的速度值
+        this.vy = random(4, 5);
+        // 雨滴下落的最大高度
+        this.l = random(0.8 * h, 0.9 * h);
+        // 波纹的初始半径
+        this.r = 1;
+        this.vr = 1; // 半径增大的速度
+        // 判断雨滴消失的透明度
+        this.a = 1; // => 0
+        this.va = 0.96; // 透明度的变化系数
+      },
+      draw: function () {
+        // 雨滴下落到了指定位置，开始绘制圆形
+        if (this.y > this.l) {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+          ctx.strokeStyle = 'rgba(0, 255, 255,' + this.a + ')';
+          ctx.stroke();
+        } else {
+          // 绘制下落的雨滴
+          ctx.fillStyle = 'rgb(0, 255, 255)';
+          ctx.fillRect(this.x, this.y, 2, 10);
+        }
+        this.update();
+      },
+      update: function () {
+        if (this.y < this.l) {
+          this.y += this.vy;
+        } else {
+          if (this.a > 0.03) {
+            this.r += this.vr;
+            if (this.r > 50) {
+              this.a *= this.va;
+            }
+          } else {
+            this.init();
+          }
+        }
+      }
+    }
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    for (let i = 0; i < 30; i++) {
+      setTimeout(function () {
+        const drop = new Drop();
+        drop.init();
+        drops.push(drop);
+      }, i * 300);
+    }
+
+    function move() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillRect(0, 0, w, h);
+      for (let k = 0; k < drops.length; k++) {
+        drops[k].draw();
+      }
+      requestAnimationFrame(move);
+    }
+    move();
+  </script>
+</body>
+
+</html>
