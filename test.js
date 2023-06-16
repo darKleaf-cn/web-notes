@@ -1,17 +1,3 @@
-function defineReactive(obj, key, val, cb) {
-  Object.defineProperty(obj, key, {
-    enumerable: true,
-    configurable: true,
-    get() {
-      return val;
-    },
-    set(newValue) {
-      val = newValue;
-      cb();
-    }
-  });
-}
-
 function observe(value, cb) {
   Object.keys(value).forEach((key) => defineReactive(value, key, value[key], cb));
 }
@@ -47,6 +33,11 @@ class Dep {
     const index = this.subs.indexOf(sub);
     this.subs.splice(index, 1);
   }
+  depend() {
+    if (Dep.target) {
+      Dep.target.addDep(this);
+    }
+  }
   notify() {
     const subs = this.subs.slice();
     for (let i = 0; i < subs.length; i++) {
@@ -59,12 +50,48 @@ class Watcher {
   constructor(vm, expOrFn, cb, options) {
     this.cb = cb;
     this.vm = vm;
+    vm._watchers.push(this);
     Dep.target = this;
-    this.cb.call(this.vm);
+    this.get();
   }
 
+  get() {
+    pushTarget(this);
+    let value;
+    const vm = this.vm;
+    value = this.cb.call(this.vam, vm);
+    if (this.depp) {
+      traverse(value);
+    }
+    popTarget();
+    this.cleanupDeps();
+    return value;
+  }
+
+  cleanupDeps() {}
+
   update() {
-    this.cb.call(this.vm);
+    if (this.lazy) {
+      this.dirty = true;
+    } else if (this.sync) {
+      this.run();
+    } else {
+      queueWatcher(this);
+    }
+  }
+
+  run() {
+    this.cb.call(this.vm, value, oldValue);
+  }
+
+  cleanupDeps() {
+    let i = this.cleanupDeps.length;
+    while (i--) {
+      const dep = this.deps[i];
+      if (!this.newDepIds.has(dep.id)) {
+        dep.removeSub(this);
+      }
+    }
   }
 }
 
@@ -119,13 +146,78 @@ class Observer {
   }
 }
 
-
 const arrayProto = Array.prototype;
 const arrayMethods = Object.create(arrayProto);
 ['push', 'pop', 'shift', 'unshift', 'reverse', 'sort', 'splice'].forEach(function (method) {
   const original = arrayProto[method];
 
-  Object.defineProperty(arrayMethods, method, function() {
-    
-  })
-})
+  Object.defineProperty(arrayMethods, method, {
+    configurable: true,
+    value: function (...args) {
+      const result = original.apply(this, args);
+      const ob = this.__ob__;
+      let inserted;
+      switch (method) {
+        case 'push':
+          inserted = args;
+          break;
+        case 'unshift':
+          inserted = args;
+          break;
+        case 'splice':
+          inserted = args.slice(2);
+          break;
+      }
+      if (inserted) {
+        ob.observeArray(inserted);
+      }
+      ob.dep.notify();
+      return result;
+    }
+  });
+});
+
+function defineReactive(obj, key, val) {
+  const dep = new Dep();
+
+  const property = Object.getOwnPropertyDescriptor(obj, key);
+  if (property && property.configurable === false) {
+    return;
+  }
+
+  const getter = property && property.get;
+  const setter = property && property.set;
+
+  let childOb = observe(val);
+
+  Object.defineProperty(obj, key, {
+    enumerable: true,
+    configurable: true,
+    get: function () {
+      const value = getter ? getter.call(obj) : val;
+      if (Dep.target) {
+        dep.depend();
+        if (childOb) {
+          childOb.dep.depend();
+        }
+        if (Array.isArray(value)) {
+          dependArray(value);
+        }
+      }
+      return value;
+    },
+    set: function (newVal) {
+      const value = getter ? getter.call(obj) : val;
+      if (newVal === value) {
+        return;
+      }
+      if (setter) {
+        setter.call(obj, newVal);
+      } else {
+        val = newVal;
+      }
+      childOb = observe(newVal);
+      dep.notify();
+    }
+  });
+}
