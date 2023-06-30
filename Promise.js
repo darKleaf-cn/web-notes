@@ -159,7 +159,25 @@ function resolvePromise(promise2, x, resolve, reject) {
   if (x === promise2) {
     reject(new Error(''));
   }
-  if (typeof x === 'object' || typeof x === 'function') {
+  if (x instanceof Promise1) {
+    console.log('aa' + x);
+    // 获得它的终值 继续resolve
+    if (x.status === PENDING) {
+      // 如果为等待态需等待直至 x 被执行或拒绝 并解析y值
+      x.then(
+        (y) => {
+          resolvePromise(promise2, y, resolve, reject);
+        },
+        (reason) => {
+          reject(reason);
+        }
+      );
+    } else {
+      // 如果 x 已经处于执行态/拒绝态(值已经被解析为普通值)，用相同的值执行传递下去 promise
+      x.then(resolve, reject);
+    }
+    // 如果 x 为对象或者函数
+  } else if (typeof x === 'object' || typeof x === 'function') {
     if (x === null) {
       resolve(x);
     }
@@ -202,17 +220,24 @@ a.then(() => {
   })
     .then((a) => {
       console.log(a);
-      throw Error('11');
+      // throw Error('11');
     })
-    .catch((a) => {
+    .then((a) => {
       console.log(a);
       return 42;
+    })
+    .then((a) => {
+      console.log(a);
+      return 41;
     });
-}).then((a) => {
-  console.log(a);
-  throw a;
-}).finally(() => {
-  console.log(43)
-}).catch((a) => {
-  console.log(a)
 })
+  .then((a) => {
+    console.log(a);
+    throw a;
+  })
+  .finally(() => {
+    console.log(43);
+  })
+  .catch((a) => {
+    console.log(a);
+  });

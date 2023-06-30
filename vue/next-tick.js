@@ -46,4 +46,9 @@ export function nextTick(cb, ctx) {
     pending = true;
     timerFunc();
   }
+  if (!cb && typeof Promise !== 'undefined') {
+    return new Promise((resolve, reject) => {
+      _resolve = resolve;
+    });
+  }
 }

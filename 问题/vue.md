@@ -255,3 +255,121 @@ key 数组记录目前缓存的组件 key 值，如果组件没有指定 key 值
 cache 对象以 key 值为键，vnode 为值，用于缓存组件对应的虚拟 dom  
 在 keep-alive 的渲染函数中，其基本逻辑是判断当前渲染的 vnode 是否有对应的缓存，如果有，从缓存中读取到对应的组件实例；如果没有则将其缓存  
 当缓存数量超过 max 数值时，keep-alive 会移除掉 key 数组的第一个元素。
+
+#### 14、nextTick 的作用是什么？他的实现原理是什么？
+
+vue 更新 dom 是异步更新的，数据变化，dom 的更新并不会马上完成，nextTick 的回调是在下次 dom 更新循环结束之后执行的延迟回调。  
+实现原理：nextTick 主要使用了宏任务和微任务。根据执行环境分别尝试采用
+
+1. Promise：可以将函数延迟到当前函数调用栈最末端
+2. MutationObserver：是 H5 新加的一个功能，其功能是监听 dom 节点的变动，在所有的 dom 变动完成后，执行回调函数
+3. setImmediate：用于中断长时间运行的操作，并在浏览器完成其他操作（如事件和显示更新）后立即运行回调函数
+4. 如果以上都不行则采用 setTimeout 把函数延迟到 dom 更新之后再使用，原因是宏任务消耗大于微任务，优先使用微任务，最后使用消耗最大的宏任务。
+
+#### 15、说一下 vue ssr 的实现原理
+
+1. app.js 作为客户端与服务端的公用入口，导出 vue 根实例，供客户端 entry 与服务端 entry 使用。客户端 entry 主要作用挂载到 dom 上，服务端 entry 除了创建和返回实例，还需要进行路由匹配与数据预获取。
+2. webpack 为客户端打包一个 clientBundle，为服务端打包一个 ServerBundle。
+3. 服务器接受请求时，会根据 url，记载相应组件，获取和解析异步数据，创建一个读取 server bundle 的 bundleRenderer，然后生成 html 发送给客户端。
+4. 客户端混合，客户端收到从服务端传来的 dom 与自己的生成的 dom 进行对比，把不相同的 dom 激活，使其可以能够响应后续变化，这个过程称为客户端激活，也就是转换为单页面应用。为确保混合成功，客户端与服务器端需要共享同一套数据。在服务端，可以在渲染之前获取数据，填充到 store 里，这样，在客户端挂载到 dom 之前，可以直接从 store 取数据。首屏的动态数据通过 window.INITIAL_STATE 发送到客户端
+5. vuessr 的原理，就是通过 vue-server-renderer 把 vue 的组件输出成一个完整 html，输出到客户端，到达客户端后重新展开为一个单页面应用。
+
+#### 16、vue 组件的 data 为什么必须是函数
+
+组建中的 data 写成一个函数，数据以函数返回值形式定义。这样没复用一次组件，就会返回一份新的 data，类似于给每个组件实例创建一个私有的数据空间，让各个组件实例维护各自的数据。而单纯的写成对象形式，就使得所有组件实例共用了一份 data，就会造成一个变了全部都变的结果。
+
+#### 17、说一下 vue 的 computed 的实现原理
+
+当组件实例触发生命周期 beforeCreate 后，它会做一系列事情，其中就包括对 computed 的处理。  
+它会遍历 computed 配置中的所有属性，为每一个属性创建一个 watcher 对象，并传入一个函数，该函数的本质其实就是 computed 配置中的 getter，这样一来，getter 运行过程中就会收集依赖。  
+但是和渲染函数不同，为计算属性创建的 watcher 不会立即执行，因为要考虑到该计算属性是否会被渲染函数使用，如果没有使用，就不会立即执行。因此，在创建 watcher 的时候，它使用了 lazy 配置，lazy 配置可以让 watcher 不会立即执行。  
+收到 lazy 的影响，watcher 内部会保存两个关键属性来实现缓存，一个是 value，一个是 dirty
+
+1. vlaue 属性用来保存 watcher 运行的结果，受 lazy 的影响，该值在最开始是 undefined
+2. dirty 属性用来指示当前的 value 是否已经过时了，即是否为脏值，受 lazy 的影响，该值在最开始是 true
+
+watcher 创建好后，vue 会使用代理模式，将计算属性挂载到组件实例中，当读取计算属性时，vue 检查其对应的 watcher 是否是脏值，如果是，则运行函数，计算依赖，并得到对应的值，保存在 watcher 的 value 中，然后设置 dirty 为 false，然后返回 watcher 的 value  
+巧妙地是，在依赖收集时，被依赖的数据不仅会收集到计算属性的 watcher，还会收集到组件的 watcher  
+当计算属性的依赖变化时，会先触发计算属性的 watcher 执行，此时，它只需设置 dirty 为 true 即可，不做处理。  
+由于依赖同时会收集到组件的 watcher，因此组件会重新渲染，而重新渲染时又读取到了计算属性，由于计算属性目前为 dirty，因此会重新运行 getter 进行运算。而对于计算属性的 setter，则极其简单，当设置计算属性时，直接运行 setter 即可。
+
+#### 18、vue complier 的实现原理是什么
+
+在使用 vue 的时候，我们有两种方式来创建我们的 html 页面，第一种情况，也是大多情况下，我们会使用模板 template 的方式，因为这更易读易懂也是官方推荐的方法；第二种情况是使用 render 函数来生成 html，它比 template 更接近最终结果。  
+complier 的主要作用是解析模板，生成渲染模板的 render，而 render 的作用主要是为了生成 vnode。compllier 主要分为三大块：
+
+1. parse：接受 template 原始模板，接着模板的节点和数据生成对应的 ast
+2. optimize：遍历 ast 的每一个节点，标记静态节点，这样就知道哪部分不会变化，于是在页面更新时，通过 diff 减少去对比这部分 dom，提升性能
+3. generate 把前两步生成完善的 ast，组成 render 字符串，然后将 render 字符串通过 new Function 的方式转换成渲染函数
+
+#### 19、proxy 相比 defineProperty 的优势在哪里
+
+vue3 改用 proxy 替代 Object.defineProperty  
+原因在于 Object.defineProperty 本身存在的一些问题：
+
+1. Object.defineProperty 只能劫持对象属性的 getter 和 setter 方法
+2. Object.defineProperty 不支持数组（可以监听数组，不过数组方法无法监听自己重写），更准确的不支持数组的各种 API
+
+而相比 Object.defineProperty，Proxy 的优点在于：
+
+1. Proxy 是直接代理劫持整个对象
+2. Proxy 可以直接监听对象和数组的变化，并且有多达 13 中拦截方法
+
+#### 20、watch 与 computed 的区别是什么？以及他们的使用场景分别是什么？
+
+区别：
+
+1. 都是观察数据变化的
+2. 计算阿属性会混入到 vue 的实例中，所以需要监听自定义变量；watch 监听 data、props 里面数据的变化
+3. computed 有缓存，它依赖的值变了才会重新计算，watch 没有
+4. watch 支持异步，computed 不支持
+5. watch 是一对多（监听某一个值变化，执行对应操作）；computed 是多对一（监听属性依赖于其他属性）
+6. watch 监听函数接受两个参数，第一个是最新值，第二个是输入之前的值
+7. computed 属性是函数时，都有 get 和 set 方法，默认是 get 方法，get 必须有返回值
+
+watch 的参数：
+
+1. deep：深度监听
+2. immediate：组件加载立即触发回调函数执行
+
+computed 缓存原理：  
+computed 本质是一个惰性的观察者；当计算数据存在于 data 或者 props 里时会被警告；  
+vue 初次运行会对 computed 属性做初始化处理，初始化的时候会对每一个 computed 属性用 watcher 包装起来，这里面会生成一个 dirty 属性值为 true；然后执行 defineComputed 函数来计算，计算之后会将 dirty 值变为 false，这里会根据 dirty 值来判断是否需要重新计算；如果属性依赖的数据发生变化，computed 的 watcher 会把 dirty 变为 true，这样就会重新计算 computed 属性的值。
+
+#### 21、scoped 是如何实现样式穿透的
+
+首先说一下什么场景下需要 scoped 样式穿透？  
+在很多项目中，会出现这么一种情况，即：引用了第三方组件，需要在组件中局部修改第三方组件的样式，而又不想去除 scoped 属性造成组件之间的样式污染。此时只能通过特殊的方式，穿透 scoped。  
+有三种常用的方法来实现样式穿透  
+方法一：使用::v-deep 操作符
+
+```js
+<style lang="scss" scoped>
+.a{
+ ::v-deep .b {
+  /* ... */
+ }
+}
+</style>
+```
+
+方法二：单独添加一个不包含 scope 的 style
+
+```js
+<style>
+
+/* global styles */
+
+</style>
+
+
+
+<style scoped>
+
+/* local styles */
+
+</style>
+
+```
+
+方法三：在组件的外层 dom 上添加唯一的 calss 来区分不同组件，在书写样式时就可以正常真毒这部分 dom 书写样式
