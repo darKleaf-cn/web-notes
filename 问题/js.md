@@ -96,3 +96,30 @@ scavange 算法将新生代分为两部分，分别为 from-space 和 to-space
 1. 全停顿：GC 回收时会阻塞 js 脚本的运行导致系统停顿，等 GC 回收结束后恢复正常
 2. 并行：开启 GC 回收线程后，会同时开启多个辅助线程进行处理，提高处理时间
 3. 增量标记：将一次 GC 标记过程进行拆分，一次执行一小部分，和脚本交替执行，直至这次 GC 标记完成
+
+#### 7、commonjs 和 esm 的区别和循环依赖
+
+语法层面：commonjs 通过 require，esm 通过 import
+
+三大差异
+
+1. commonjs 模块输出的是一个值的拷贝，es6 模块输出的是值的引用
+2. commonjs 模块式运行时加载，es6 模块式编译时输出接口
+3. commonjs 模块的 require 是同步加载模块，es6 模块的 import 是异步加载，有一个独立的模块依赖的解析阶段
+
+第二个差异是因为 commonjs 加载的是一个对象（即 module.exports 属性），该对象只有在脚本运行完才会生成。而 es6 模块不是对象，它的对外接口只是一种静态定义，在代码静态解析阶段就会生成。
+
+第一个差异：改变 incCounter 函数，counter 并不会变化
+
+```js
+var counter = 3;
+function incCounter() {
+  counter++;
+}
+module.exports = {
+  counter: counter,
+  incCounter: incCounter
+};
+```
+
+而 es6 模块的运行机制与 commonjs 不一样。js 引擎对脚本静态分析的时候，遇到模块加载命令 import，就会生成一个只读引用。等到脚本真正执行时，再根据这个只读引用，到被加载的那个模块里面去取值。
