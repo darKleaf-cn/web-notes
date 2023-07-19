@@ -109,6 +109,11 @@ module.exports = {
     new webpack.ProgressPlugin(),
     new HtmlWebpackPlugin({
       template: './src/index.html'
+    })，
+    //Webpack plugins定义
+    new webpack.ProvidePlugin({
+      $: 'jquery',
+      jQuery: 'jquery'
     })
   ]
 };
